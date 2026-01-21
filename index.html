@@ -767,14 +767,17 @@ Try it out!"></textarea>
                     let newStyle = { ...style };
 
                     if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
-                        newStyle.fontSize = tagName === 'h1' ? 24 : tagName === 'h2' ? 18 : tagName === 'h3' ? 14 : 12;
+                        newStyle.fontSize = tagName === 'h1' ? 18 : tagName === 'h2' ? 14 : tagName === 'h3' ? 12 : tagName === 'h4' ? 11 : tagName === 'h5' ? 10 : 10;
                         newStyle.bold = true;
                         lines.push({ text: '\n', style: newStyle, isBreak: true, indent });
                     }
 
                     if (tagName === 'strong' || tagName === 'b') newStyle.bold = true;
                     if (tagName === 'em' || tagName === 'i') newStyle.italic = true;
-                    if (tagName === 'code') newStyle.mono = true;
+                    if (tagName === 'code') {
+                        newStyle.mono = true;
+                        newStyle.fontSize = 10;
+                    }
 
                     if (tagName === 'ul') {
                         Array.from(node.childNodes).forEach(child => traverse(child, newStyle, indent));
@@ -795,11 +798,11 @@ Try it out!"></textarea>
                         const codeText = node.textContent;
                         const codeLines = codeText.split('\n');
                         codeLines.forEach(line => {
-                            lines.push({ text: line, style: { ...newStyle, mono: true }, indent });
-                            lines.push({ text: '\n', style: { ...newStyle, mono: true }, isBreak: true, indent });
+                            lines.push({ text: line, style: { ...newStyle, mono: true, fontSize: 10 }, indent: indent + 1 });
+                            lines.push({ text: '\n', style: { ...newStyle, mono: true, fontSize: 10 }, isBreak: true, indent: indent + 1 });
                         });
                     } else if (tagName === 'blockquote') {
-                        Array.from(node.childNodes).forEach(child => traverse(child, newStyle, indent + 1));
+                        Array.from(node.childNodes).forEach(child => traverse(child, newStyle, indent + 2));
                     } else if (tagName === 'table') {
                         // Skip tables for now, or simple text
                         lines.push({ text: '[Table]', style: newStyle, indent });
@@ -866,34 +869,33 @@ Try it out!"></textarea>
                 if (currentPageNum > 0) pdf.addPage();
                 currentPageNum++;
                 
-                // Draw header (skip in slides mode if you want clean slides, or keep it)
+                // Draw header
                 if (headerEnabled) {
-                    pdf.setFontSize(10);
+                    pdf.setFontSize(11);
                     pdf.setTextColor(100);
                     const headerX = { left: marginLeft, center: pageWidth / 2, right: pageWidth - marginRight };
-                    // Ensure header doesn't sit on edge if margins are 0
-                    const effectiveY = marginTop === 0 ? 5 : marginTop - 3; 
+                    const effectiveY = marginTop === 0 ? 8 : marginTop - 4;
                     pdf.text(document.getElementById('header-text').value, headerX[appState.headerPos], effectiveY, { align: appState.headerPos });
                 }
             };
 
             const drawFooterAndPageNum = () => {
                 if (footerEnabled) {
-                    pdf.setFontSize(10);
+                    pdf.setFontSize(11);
                     pdf.setTextColor(100);
                     const footerX = { left: marginLeft, center: pageWidth / 2, right: pageWidth - marginRight };
-                    const effectiveY = marginBottom === 0 ? pageHeight - 5 : pageHeight - marginBottom + 3;
+                    const effectiveY = marginBottom === 0 ? pageHeight - 8 : pageHeight - marginBottom + 4;
                     pdf.text(document.getElementById('footer-text').value, footerX[appState.footerPos], effectiveY, { align: appState.footerPos });
                 }
 
                 if (paginationEnabled) {
-                    pdf.setFontSize(9);
+                    pdf.setFontSize(10);
                     pdf.setTextColor(120);
                     const totalPages = pdf.internal.pages.length - 1;
                     const pageText = (paginationFormatInput.value || 'Page {page} of {total}')
                         .replace('{page}', currentPageNum)
                         .replace('{total}', totalPages);
-                    const effectiveY = marginBottom === 0 ? pageHeight - 5 : pageHeight - marginBottom + 3;
+                    const effectiveY = marginBottom === 0 ? pageHeight - 8 : pageHeight - marginBottom + 4;
                     pdf.text(pageText, pageWidth / 2, effectiveY, { align: 'center' });
                 }
             };
@@ -901,75 +903,75 @@ Try it out!"></textarea>
             // --- RENDER LOGIC ---
 
             if (appState.mode === 'document') {
-                // Raster PDF generation for accurate layout matching preview
-                const previewEl = document.getElementById('document-preview');
-
-                // Temporarily remove CSS padding so we don't get double margins
-                const originalPadding = previewEl.style.padding;
-                previewEl.style.padding = '0px';
-
-                const canvas = await html2canvas(previewEl, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    windowWidth: previewEl.scrollWidth,
-                    windowHeight: previewEl.scrollHeight
-                });
-
-                // Restore CSS padding immediately
-                previewEl.style.padding = originalPadding;
-
-                const imgData = canvas.toDataURL('image/png');
-                const imgWidth = contentWidth;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-                // Calculate height available for content
-                const headerH = headerEnabled ? 10 : 0;
-                const footerH = footerEnabled ? 10 : 0;
+                // Vector PDF generation with professional typesetting
+                const html = md.render(appState.markdown);
+                const lines = extractTextWithStyle(html);
+                const headerH = headerEnabled ? 15 : 0;
+                const footerH = footerEnabled ? 15 : 0;
                 const availableHeight = pageHeight - marginTop - marginBottom - headerH - footerH;
 
-                let remainingHeight = imgHeight;
-                let yOffset = 0;
-
+                let currentY = marginTop + headerH;
                 addNewPage();
 
-                while (remainingHeight > 0) {
-                    const heightForThisPage = Math.min(remainingHeight, availableHeight);
+                for (const line of lines) {
+                    const fontSize = line.style.fontSize || 12;
+                    const lineHeight = fontSize * 1.5;
+                    const indentX = marginLeft + (line.indent || 0) * 6; // 6mm per indent level for professional spacing
 
-                    const sourceY = (yOffset / imgHeight) * canvas.height;
-                    const sourceH = (heightForThisPage / imgHeight) * canvas.height;
+                    if (line.isBreak) {
+                        currentY += lineHeight;
+                    } else {
+                        pdf.setFontSize(fontSize);
+                        let fontName = line.style.mono ? 'courier' : 'times';
+                        let fontStyle = 'normal';
+                        if (line.style.bold && line.style.italic) fontStyle = 'bolditalic';
+                        else if (line.style.bold) fontStyle = 'bold';
+                        else if (line.style.italic) fontStyle = 'italic';
+                        pdf.setFont(fontName, fontStyle);
 
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = canvas.width;
-                    tempCanvas.height = sourceH;
-                    const tempCtx = tempCanvas.getContext('2d');
+                        if (line.style.mono) {
+                            // Code blocks with background
+                            const textWidth = pdf.getTextWidth(line.text);
+                            pdf.setFillColor(245, 245, 245);
+                            pdf.rect(indentX - 2, currentY - fontSize * 0.8, textWidth + 4, fontSize * 1.2, 'F');
+                            pdf.setTextColor(0, 0, 0);
+                            pdf.text(line.text, indentX, currentY);
+                            currentY += lineHeight;
+                        } else {
+                            // Word wrap for regular text
+                            const words = line.text.split(/\s+/);
+                            let currentLine = '';
+                            let lineY = currentY;
+                            for (const word of words) {
+                                const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                                const testWidth = pdf.getTextWidth(testLine);
+                                if (testWidth > contentWidth - (line.indent || 0) * 6 && currentLine) {
+                                    pdf.text(currentLine, indentX, lineY);
+                                    lineY += lineHeight;
+                                    currentLine = word;
+                                    if (lineY + lineHeight > pageHeight - marginBottom - footerH) {
+                                        drawFooterAndPageNum();
+                                        addNewPage();
+                                        lineY = marginTop + headerH;
+                                    }
+                                } else {
+                                    currentLine = testLine;
+                                }
+                            }
+                            if (currentLine) {
+                                pdf.text(currentLine, indentX, lineY);
+                                currentY = lineY + lineHeight;
+                            }
+                        }
+                    }
 
-                    tempCtx.drawImage(
-                        canvas,
-                        0, sourceY, canvas.width, sourceH,
-                        0, 0, canvas.width, sourceH
-                    );
-
-                    const pageImgData = tempCanvas.toDataURL('image/png');
-                    const contentStartY = marginTop + headerH;
-
-                    pdf.addImage(
-                        pageImgData, 'PNG',
-                        marginLeft, contentStartY,
-                        imgWidth, heightForThisPage,
-                        undefined, 'FAST'
-                    );
-
-                    drawFooterAndPageNum();
-
-                    remainingHeight -= heightForThisPage;
-                    yOffset += heightForThisPage;
-
-                    if (remainingHeight > 0) {
+                    if (currentY > pageHeight - marginBottom - footerH) {
+                        drawFooterAndPageNum();
                         addNewPage();
+                        currentY = marginTop + headerH;
                     }
                 }
+                drawFooterAndPageNum();
             } else {
                 // --- SLIDES MODE ---
                 const slides = Array.from(document.querySelectorAll('.slide'));
