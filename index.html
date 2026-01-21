@@ -923,12 +923,16 @@ Try it out!"></textarea>
                 // Raster PDF generation with professional HTML styling
                 const previewEl = document.getElementById('document-preview');
 
+                // Calculate scale to match PDF text size to web
+                const contentWidthPx = contentWidth * (72 / 25.4); // mm to px at 72dpi
+                const scale = contentWidthPx / previewEl.scrollWidth;
+
                 // Temporarily adjust styling for PDF capture
-                const originalFontSize = previewEl.style.fontSize;
-                previewEl.style.fontSize = '12px'; // Ensure consistent sizing
+                const originalPadding = previewEl.style.padding;
+                previewEl.style.padding = '0px'; // Remove padding for accurate capture
 
                 const canvas = await html2canvas(previewEl, {
-                    scale: 1.5, // Reduced scale for better text proportion
+                    scale: scale,
                     useCORS: true,
                     logging: false,
                     backgroundColor: '#ffffff',
@@ -937,7 +941,7 @@ Try it out!"></textarea>
                 });
 
                 // Restore styling
-                previewEl.style.fontSize = originalFontSize;
+                previewEl.style.padding = originalPadding;
 
                 const imgData = canvas.toDataURL('image/png');
                 const imgWidth = contentWidth;
