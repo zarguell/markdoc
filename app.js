@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewContent = document.getElementById('preview-content');
     const exportBtn = document.getElementById('export-btn');
     const exportDocxBtn = document.getElementById('export-docx-btn');
+    const exportMhtmlBtn = document.getElementById('export-mhtml-btn');
     const printBtn = document.getElementById('print-btn');
     const optionsToggle = document.getElementById('options-toggle');
     const optionsPanel = document.getElementById('options-panel');
@@ -19,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize DOCX Generator
     const docxGenerator = new DOCXGenerator();
+
+    // Initialize MHTML Generator
+    const mhtmlGenerator = new MHTMLGenerator();
 
     // Default markdown text
     const defaultText = `# Welcome to Markdoc
@@ -101,6 +105,11 @@ function hello() {
 
         docxGenerator.setOptions(headerText, footerText, includePageNumbers);
         await docxGenerator.generateDOCX(previewContent);
+    });
+
+    // Export MHTML
+    exportMhtmlBtn.addEventListener('click', async () => {
+        await mhtmlGenerator.generateMHTML(previewContent);
     });
 
     // Print PDF (text-searchable)
