@@ -85,6 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize MHTML Generator
     const mhtmlGenerator = new MHTMLGenerator();
 
+    // Initialize Snippet Library
+    window.snippetLibrary = new SnippetLibrary();
+    window.snippetLibrary.init();
+
     // Default markdown text
     const defaultText = `# Welcome to browsermark
 
