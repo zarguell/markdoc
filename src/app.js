@@ -1,3 +1,62 @@
+// Utility Functions
+function sanitizeFilename(filename) {
+    if (!filename || typeof filename !== 'string') {
+        return 'browsermark-document';
+    }
+
+    // Trim whitespace
+    let sanitized = filename.trim();
+
+    // Return default if empty
+    if (!sanitized) {
+        return 'browsermark-document';
+    }
+
+    // Convert to lowercase
+    sanitized = sanitized.toLowerCase();
+
+    // Replace spaces with hyphens
+    sanitized = sanitized.replace(/\s+/g, '-');
+
+    // Remove/replace invalid filesystem characters
+    // Keep only letters, numbers, hyphens, underscores, and dots
+    sanitized = sanitized.replace(/[^a-z0-9\-_\.]/g, '');
+
+    // Remove multiple consecutive hyphens/underscores
+    sanitized = sanitized.replace(/[-_]{2,}/g, '-');
+
+    // Trim hyphens/underscores from start and end
+    sanitized = sanitized.replace(/^[-_]+|[-_]+$/g, '');
+
+    // Ensure reasonable length (max 100 characters)
+    if (sanitized.length > 100) {
+        sanitized = sanitized.substring(0, 100);
+        // Trim trailing hyphens/underscores after truncation
+        sanitized = sanitized.replace(/[-_]+$/g, '');
+    }
+
+    // Ensure not empty after sanitization
+    if (!sanitized) {
+        return 'browsermark-document';
+    }
+
+    return sanitized;
+}
+
+function extractFirstHeader(markdown) {
+    if (!markdown || typeof markdown !== 'string') {
+        return null;
+    }
+
+    // Match the first # header (h1)
+    const headerMatch = markdown.match(/^#\s+(.+)$/m);
+    if (headerMatch && headerMatch[1]) {
+        return headerMatch[1].trim();
+    }
+
+    return null;
+}
+
 // Main Application Logic
 document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('markdown-input');
@@ -14,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const linkUrlsCheckbox = document.getElementById('link-urls-checkbox');
     const wordHeadersCheckbox = document.getElementById('word-headers-checkbox');
     const fontSelect = document.getElementById('font-select');
+    const filenameInput = document.getElementById('filename-input');
+    const autoFilenameCheckbox = document.getElementById('auto-filename-checkbox');
 
     // Initialize PDF Generator
     const pdfGenerator = new PDFGenerator();
@@ -87,14 +148,34 @@ function hello() {
         previewContent.classList.add(`font-${selectedFont}`);
     }
 
+    // Function to get the effective filename
+    function getEffectiveFilename(extension = '') {
+        let filename = filenameInput.value.trim();
+
+        // If auto-filename is enabled, try to extract from first header
+        if (autoFilenameCheckbox.checked) {
+            const headerText = extractFirstHeader(input.value);
+            if (headerText) {
+                filename = headerText;
+            }
+        }
+
+        // Sanitize the filename
+        const sanitized = sanitizeFilename(filename);
+
+        // Add extension if provided
+        return extension ? `${sanitized}${extension}` : sanitized;
+    }
+
     // Export PDF with options
     exportBtn.addEventListener('click', () => {
         const headerText = headerInput.value.trim();
         const footerText = footerInput.value.trim();
         const includePageNumbers = pageNumbersCheckbox.checked;
+        const filename = getEffectiveFilename('.pdf');
 
         pdfGenerator.setOptions(headerText, footerText, includePageNumbers);
-        pdfGenerator.generatePDF(previewContent);
+        pdfGenerator.generatePDF(previewContent, filename);
     });
 
     // Export DOCX
@@ -102,14 +183,16 @@ function hello() {
         const headerText = headerInput.value.trim();
         const footerText = footerInput.value.trim();
         const includePageNumbers = pageNumbersCheckbox.checked;
+        const filename = getEffectiveFilename('.docx');
 
         docxGenerator.setOptions(headerText, footerText, includePageNumbers);
-        await docxGenerator.generateDOCX(previewContent);
+        await docxGenerator.generateDOCX(previewContent, filename);
     });
 
     // Export MHTML
     exportMhtmlBtn.addEventListener('click', async () => {
-        await mhtmlGenerator.generateMHTML(previewContent);
+        const filename = getEffectiveFilename('.mht');
+        await mhtmlGenerator.generateMHTML(previewContent, filename);
     });
 
     // Print PDF (text-searchable)

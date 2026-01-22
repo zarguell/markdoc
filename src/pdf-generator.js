@@ -12,10 +12,10 @@ class PDFGenerator {
         this.includePageNumbers = includePageNumbers;
     }
 
-    generatePDF(element) {
+    generatePDF(element, filename = 'browsermark-document.pdf') {
         const opt = {
             margin: [0.5, 0.4, 0.8, 0.4], // top, right, bottom, left - increased top to prevent clipping on page breaks
-            filename: 'browsermark-document.pdf',
+            filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
@@ -65,7 +65,7 @@ class PDFGenerator {
                     }
                 }
 
-                pdf.save('browsermark-document.pdf');
+                pdf.save(filename);
             })
             .catch((err) => {
                 console.error('PDF Generation Error:', err);
