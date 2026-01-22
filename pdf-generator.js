@@ -14,7 +14,7 @@ class PDFGenerator {
 
     generatePDF(element) {
         const opt = {
-            margin: [0.4, 0.4, 0.8, 0.4], // top, right, bottom, left - increased bottom for footer
+            margin: [0.5, 0.4, 0.8, 0.4], // top, right, bottom, left - increased top to prevent clipping on page breaks
             filename: 'markdoc-document.pdf',
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
