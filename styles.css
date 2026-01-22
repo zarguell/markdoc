@@ -73,6 +73,8 @@ textarea {
 /* Word-style header colors */
 #preview-content.word-headers h1 { color: #2E75B6; }
 #preview-content.word-headers h2 { color: #5B9BD5; }
+#preview-content.word-headers h3 { color: #4472C4; }
+#preview-content.word-headers h4 { color: #8EA9DB; }
 
 /* Font family options */
 #preview-content.font-calibri { font-family: 'Calibri', sans-serif; }
