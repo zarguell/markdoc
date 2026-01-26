@@ -1,3 +1,9 @@
+// Import docshift
+import { toDocx as docshift } from 'docshift';
+
+// Make available globally for this module
+window.docshift = { toDocx: docshift };
+
 class DOCXGenerator {
     constructor() {
         // Options for headers/footers/page numbers
@@ -218,4 +224,4 @@ class DOCXGenerator {
     }
 }
 
-window.DOCXGenerator = DOCXGenerator;
+export { DOCXGenerator };

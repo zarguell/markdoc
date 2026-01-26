@@ -669,3 +669,9 @@ button:hover { background: #0056b3; }
         page-break-inside: avoid;
     }
 }
+
+/* Button disabled state */
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

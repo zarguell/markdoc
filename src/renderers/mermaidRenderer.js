@@ -3,7 +3,7 @@
  * Supports flowcharts, sequence diagrams, Gantt charts, and more
  */
 import { DiagramRenderer } from './diagramRenderer.js';
-import { ScriptLoader } from '../utils/scriptLoader.js';
+import mermaid from 'mermaid';
 
 export class MermaidRenderer extends DiagramRenderer {
   constructor() {
@@ -19,12 +19,7 @@ export class MermaidRenderer extends DiagramRenderer {
     if (this.initialized) return;
 
     try {
-      const loader = new ScriptLoader();
-      const mermaidModule = await loader.loadModule(
-        'https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.esm.min.mjs'
-      );
-
-      this.mermaid = mermaidModule.default;
+      this.mermaid = mermaid;
       this.mermaid.initialize({
         startOnLoad: false,
         theme: 'default'
