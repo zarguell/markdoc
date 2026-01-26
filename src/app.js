@@ -1,3 +1,7 @@
+// Import diagram rendering system
+import { DiagramManager } from './DiagramManager.js';
+import { renderMarkdownWithDiagramsToHtml } from './utils/markdownDiagramProcessor.js';
+
 // Utility Functions
 function sanitizeFilename(filename) {
     if (!filename || typeof filename !== 'string') {
@@ -92,6 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.snippetLibrary = new SnippetLibrary();
     window.snippetLibrary.init();
 
+    // Initialize Diagram Manager
+    const diagramManager = new DiagramManager();
+
     // Default markdown text
     const defaultText = `# Welcome to browsermark
 
@@ -100,6 +107,7 @@ browsermark is a simple markdown to PDF converter that generates high-quality do
 ## Features
 
 - Live preview of your markdown
+- **Diagram Support**: Mermaid, Graphviz, Nomnoml, and Pikchr diagrams
 - Custom headers and footers
 - Page numbering support
 - Clean, professional PDF output
@@ -111,14 +119,89 @@ function hello() {
 }
 \`\`\`
 
+## Example Diagram
+
+\`\`\`mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Do Something]
+    B -->|No| D[Do Something Else]
+    C --> E[End]
+    D --> E
+\`\`\`
+
 > This is a blockquote example.
 `;
     input.value = defaultText;
 
-    // Update preview function
-    function updatePreview() {
+    // Update preview function (now async for diagram rendering)
+    async function updatePreview() {
         const text = input.value;
-        previewContent.innerHTML = marked.parse(text);
+
+        try {
+            // Import needed functions
+            const { getDiagramBlocks } = await import('./utils/markdownParser.js');
+
+            // Check if there are any diagram blocks in the raw markdown
+            const diagramBlocks = getDiagramBlocks(text);
+
+            if (diagramBlocks.length > 0) {
+                // Has diagrams - parse markdown to HTML first
+                const html = marked.parse(text);
+
+                // Create a temporary container
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                // Find all code blocks with diagram languages
+                const codeElements = tempDiv.querySelectorAll('pre code');
+
+                for (const codeEl of codeElements) {
+                    // Get the language from the class (marked adds "language-xxx" classes)
+                    const classList = Array.from(codeEl.classList);
+                    const languageClass = classList.find(cls => cls.startsWith('language-'));
+
+                    if (languageClass) {
+                        const language = languageClass.replace('language-', '');
+
+                        // Check if this is a diagram language
+                        if (['mermaid', 'dot', 'graphviz', 'nomnoml', 'pikchr'].includes(language)) {
+                            const diagramCode = codeEl.textContent;
+
+                            try {
+                                // Render the diagram
+                                const svgElement = await diagramManager.renderDiagram(language, diagramCode);
+
+                                // Replace the entire <pre> block with the diagram
+                                const preElement = codeEl.parentElement;
+                                const container = document.createElement('div');
+                                container.className = 'diagram-container';
+                                container.appendChild(svgElement);
+                                preElement.replaceWith(container);
+                            } catch (error) {
+                                // Show error in place of diagram
+                                console.error(`Failed to render ${language} diagram:`, error);
+                                const preElement = codeEl.parentElement;
+                                const errorDiv = document.createElement('div');
+                                errorDiv.className = 'diagram-container diagram-error';
+                                errorDiv.innerHTML = `<p class="diagram-error-title">Error rendering ${language} diagram:</p>
+                                    <pre class="diagram-error-message">${error.message}</pre>`;
+                                preElement.replaceWith(errorDiv);
+                            }
+                        }
+                    }
+                }
+
+                previewContent.innerHTML = tempDiv.innerHTML;
+            } else {
+                // No diagrams - simple markdown parse
+                previewContent.innerHTML = marked.parse(text);
+            }
+        } catch (error) {
+            console.error('Preview rendering error:', error);
+            // Fallback to basic markdown
+            previewContent.innerHTML = marked.parse(text);
+        }
     }
 
     // Options panel toggle
@@ -236,8 +319,16 @@ function hello() {
         });
     }
 
-    // Input event listener
-    input.addEventListener('input', updatePreview);
+    // Input event listener with debouncing (for diagram rendering performance)
+    let debounceTimer;
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            updatePreview().catch(err => {
+                console.error('Debounced preview error:', err);
+            });
+        }, 300); // Wait 300ms after user stops typing
+    });
 
     // Initial render
     updatePreview();
