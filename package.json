@@ -4,13 +4,28 @@
   "description": "Browser-based markdown to PDF converter with diagram support",
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"
   },
   "devDependencies": {
     "@vitest/browser": "^2.0.0",
-    "vitest": "^2.0.0",
-    "jsdom": "^24.0.0"
+    "jsdom": "^24.0.0",
+    "vite": "^5.4.21",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@viz-js/viz": "^3.24.0",
+    "docshift": "^0.0.73",
+    "docx": "^9.5.1",
+    "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.14.0",
+    "marked": "^17.0.1",
+    "mermaid": "^11.12.2",
+    "nomnoml": "^1.7.0",
+    "pikchr-js": "^0.1.1"
   }
 }

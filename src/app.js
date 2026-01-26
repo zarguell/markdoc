@@ -1,6 +1,15 @@
+// Import npm dependencies
+import { marked } from 'marked';
+
+// Import application modules
+import './snippet-library.js';
+
 // Import diagram rendering system
 import { DiagramManager } from './DiagramManager.js';
 import { renderMarkdownWithDiagramsToHtml } from './utils/markdownDiagramProcessor.js';
+
+// Make marked available globally for legacy module compatibility
+window.marked = marked;
 
 // Utility Functions
 function sanitizeFilename(filename) {
@@ -83,14 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const helpModal = document.getElementById('help-modal');
     const helpClose = document.getElementById('help-close');
 
-    // Initialize PDF Generator
-    const pdfGenerator = new PDFGenerator();
-
-    // Initialize DOCX Generator
-    const docxGenerator = new DOCXGenerator();
-
-    // Initialize MHTML Generator
-    const mhtmlGenerator = new MHTMLGenerator();
+    // Generator caches for lazy loading
+    let pdfGenerator = null;
+    let docxGenerator = null;
+    let mhtmlGenerator = null;
 
     // Initialize Snippet Library
     window.snippetLibrary = new SnippetLibrary();
@@ -169,15 +174,21 @@ graph TD
                             const diagramCode = codeEl.textContent;
 
                             try {
+                                // Show loading indicator before rendering
+                                const preElement = codeEl.parentElement;
+                                const loadingDiv = document.createElement('div');
+                                loadingDiv.className = 'diagram-container diagram-loading';
+                                loadingDiv.innerHTML = `<p class="diagram-loading-message">Loading ${language} renderer...</p>`;
+                                preElement.replaceWith(loadingDiv);
+
                                 // Render the diagram
                                 const svgElement = await diagramManager.renderDiagram(language, diagramCode);
 
-                                // Replace the entire <pre> block with the diagram
-                                const preElement = codeEl.parentElement;
+                                // Replace loading indicator with diagram
                                 const container = document.createElement('div');
                                 container.className = 'diagram-container';
                                 container.appendChild(svgElement);
-                                preElement.replaceWith(container);
+                                loadingDiv.replaceWith(container);
                             } catch (error) {
                                 // Show error in place of diagram
                                 console.error(`Failed to render ${language} diagram:`, error);
@@ -257,32 +268,80 @@ graph TD
         return extension ? `${sanitized}${extension}` : sanitized;
     }
 
-    // Export PDF with options
-    exportBtn.addEventListener('click', () => {
-        const headerText = headerInput.value.trim();
-        const footerText = footerInput.value.trim();
-        const includePageNumbers = pageNumbersCheckbox.checked;
-        const filename = getEffectiveFilename('.pdf');
+    // Export PDF with options - Lazy load on click
+    exportBtn.addEventListener('click', async () => {
+        try {
+            exportBtn.textContent = 'Loading PDF Export...';
+            exportBtn.disabled = true;
 
-        pdfGenerator.setOptions(headerText, footerText, includePageNumbers);
-        pdfGenerator.generatePDF(previewContent, filename);
+            if (!pdfGenerator) {
+                const module = await import('./pdf-generator.js');
+                pdfGenerator = new module.PDFGenerator();
+            }
+
+            const headerText = headerInput.value.trim();
+            const footerText = footerInput.value.trim();
+            const includePageNumbers = pageNumbersCheckbox.checked;
+            const filename = getEffectiveFilename('.pdf');
+
+            pdfGenerator.setOptions(headerText, footerText, includePageNumbers);
+            pdfGenerator.generatePDF(previewContent, filename);
+        } catch (error) {
+            console.error('Failed to load PDF generator:', error);
+            alert('Failed to load PDF export functionality. Please refresh and try again.');
+        } finally {
+            exportBtn.textContent = 'Export PDF';
+            exportBtn.disabled = false;
+        }
     });
 
-    // Export DOCX
+    // Export DOCX - Lazy load on click
     exportDocxBtn.addEventListener('click', async () => {
-        const headerText = headerInput.value.trim();
-        const footerText = footerInput.value.trim();
-        const includePageNumbers = pageNumbersCheckbox.checked;
-        const filename = getEffectiveFilename('.docx');
+        try {
+            exportDocxBtn.textContent = 'Loading DOCX Export...';
+            exportDocxBtn.disabled = true;
 
-        docxGenerator.setOptions(headerText, footerText, includePageNumbers);
-        await docxGenerator.generateDOCX(previewContent, filename);
+            if (!docxGenerator) {
+                const module = await import('./docx-generator.js');
+                docxGenerator = new module.DOCXGenerator();
+            }
+
+            const headerText = headerInput.value.trim();
+            const footerText = footerInput.value.trim();
+            const includePageNumbers = pageNumbersCheckbox.checked;
+            const filename = getEffectiveFilename('.docx');
+
+            docxGenerator.setOptions(headerText, footerText, includePageNumbers);
+            await docxGenerator.generateDOCX(previewContent, filename);
+        } catch (error) {
+            console.error('Failed to load DOCX generator:', error);
+            alert('Failed to load DOCX export functionality. Please refresh and try again.');
+        } finally {
+            exportDocxBtn.textContent = 'Export DOCX (BETA)';
+            exportDocxBtn.disabled = false;
+        }
     });
 
-    // Export MHTML
+    // Export MHTML - Lazy load on click
     exportMhtmlBtn.addEventListener('click', async () => {
-        const filename = getEffectiveFilename('.mht');
-        await mhtmlGenerator.generateMHTML(previewContent, filename);
+        try {
+            exportMhtmlBtn.textContent = 'Loading MHTML Export...';
+            exportMhtmlBtn.disabled = true;
+
+            if (!mhtmlGenerator) {
+                const module = await import('./mhtml-generator.js');
+                mhtmlGenerator = new module.MHTMLGenerator();
+            }
+
+            const filename = getEffectiveFilename('.mht');
+            await mhtmlGenerator.generateMHTML(previewContent, filename);
+        } catch (error) {
+            console.error('Failed to load MHTML generator:', error);
+            alert('Failed to load MHTML export functionality. Please refresh and try again.');
+        } finally {
+            exportMhtmlBtn.textContent = 'Export MHTML';
+            exportMhtmlBtn.disabled = false;
+        }
     });
 
     // Print PDF (text-searchable)

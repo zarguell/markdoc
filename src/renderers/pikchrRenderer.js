@@ -1,19 +1,13 @@
 /**
  * PikchrRenderer - Renders Pikchr technical diagrams
  * PIC-like diagram language for technical illustrations
- *
- * TODO: Pikchr CDN URL is broken - library not available on unpkg/jsdelivr
- * Need to find alternative CDN or bundle the library locally
- * Current status: Pikchr diagrams fail to load
- * See: https://github.com/abetlen/pikchr-js
  */
 import { DiagramRenderer } from './diagramRenderer.js';
-import { ScriptLoader } from '../utils/scriptLoader.js';
+import pikchr from 'pikchr-js';
 
 export class PikchrRenderer extends DiagramRenderer {
   constructor() {
     super();
-    this.loader = new ScriptLoader();
   }
 
   /**
@@ -24,34 +18,7 @@ export class PikchrRenderer extends DiagramRenderer {
     if (this.initialized) return;
 
     try {
-      const loader = new ScriptLoader();
-
-      // Try multiple possible URLs for pikchr-js
-      const urls = [
-        'https://cdn.jsdelivr.net/npm/pikchr@latest/pikchr.js',
-        'https://unpkg.com/pikchr@latest/pikchr.js',
-        'https://cdn.jsdelivr.net/npm/@abetlen/pikchr-js@latest/dist/pikchr.js',
-        'https://unpkg.com/@abetlen/pikchr-js@latest/dist/pikchr.js'
-      ];
-
-      let loaded = false;
-      for (const url of urls) {
-        try {
-          await loader.load(url);
-          loaded = true;
-          console.log(`Pikchr loaded from: ${url}`);
-          break;
-        } catch (e) {
-          console.log(`Failed to load Pikchr from ${url}, trying next...`);
-          continue;
-        }
-      }
-
-      if (!loaded) {
-        throw new Error('Could not load Pikchr from any CDN URL');
-      }
-
-      // pikchr is now available globally
+      // pikchr is imported and ready to use
       this.initialized = true;
     } catch (error) {
       throw new Error(`Failed to initialize Pikchr: ${error.message}`);

@@ -2,7 +2,7 @@
     "name": "browsermark",
     "compatibility_date": "2026-01-21",
     "assets": {
-        "directory": "src",
+        "directory": "dist/src",
         "exclude": [".git/**", "node_modules/**", ".env*", "*.log", ".vscode/**", ".idea/**", ".DS_Store"]
     }
 }

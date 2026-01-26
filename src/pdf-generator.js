@@ -1,3 +1,7 @@
+// Import html2pdf and html2canvas
+import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+
 // PDF Generation Module
 class PDFGenerator {
     constructor() {
@@ -75,4 +79,4 @@ class PDFGenerator {
 }
 
 // Export for use in app.js
-window.PDFGenerator = PDFGenerator;
+export { PDFGenerator };

@@ -3,7 +3,7 @@
  * Supports both directed and undirected graphs using Viz.js
  */
 import { DiagramRenderer } from './diagramRenderer.js';
-import { ScriptLoader } from '../utils/scriptLoader.js';
+import { instance } from '@viz-js/viz';
 
 export class VizRenderer extends DiagramRenderer {
   constructor() {
@@ -19,11 +19,7 @@ export class VizRenderer extends DiagramRenderer {
     if (this.initialized) return;
 
     try {
-      const loader = new ScriptLoader();
-      await loader.load('https://cdn.jsdelivr.net/npm/@viz-js/viz@latest/lib/viz-standalone.js');
-
-      // Viz is now available globally
-      this.viz = await Viz.instance();
+      this.viz = await instance();
       this.initialized = true;
     } catch (error) {
       throw new Error(`Failed to initialize Viz: ${error.message}`);

@@ -206,4 +206,4 @@ class MHTMLGenerator {
 }
 
 // Export for use in app.js
-window.MHTMLGenerator = MHTMLGenerator;
+export { MHTMLGenerator };
