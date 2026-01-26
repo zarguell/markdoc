@@ -4,6 +4,13 @@
  */
 
 import { getDiagramBlocks } from './markdownParser.js';
+import {
+  createErrorElement,
+  createLoadingPlaceholder,
+  updateLoadingProgress,
+  logDiagramError,
+  DiagramRenderError
+} from './diagramErrorHandler.js';
 
 /**
  * Process markdown and render diagrams to SVG
@@ -105,7 +112,9 @@ function escapeHtml(text) {
  * @param {DiagramManager} diagramManager - The diagram manager instance
  * @returns {Promise<DocumentFragment>} - Document fragment with rendered diagrams
  */
-export async function renderMarkdownWithDiagramsAsDom(markdown, diagramManager) {
+export async function renderMarkdownWithDiagramsAsDom(markdown, diagramManager, options = {}) {
+  const { showLoading = true, timeoutMs = 30000 } = options;
+
   const diagramBlocks = getDiagramBlocks(markdown);
 
   // Create a template element to parse the markdown
@@ -120,68 +129,106 @@ export async function renderMarkdownWithDiagramsAsDom(markdown, diagramManager) 
 
   // For each diagram block, find and replace the corresponding pre/code element
   for (const block of diagramBlocks) {
-    try {
-      // Find all pre/code elements in the fragment
-      const codeElements = fragment.querySelectorAll('pre code');
-      let targetElement = null;
+    // Find all pre/code elements in the fragment
+    const codeElements = fragment.querySelectorAll('pre code');
+    let targetElement = null;
 
-      // Try to find the matching code element
-      for (const codeEl of codeElements) {
-        const languageClass = codeEl.className.match(/language-(\w+)/);
-        if (languageClass && languageClass[1] === block.language) {
-          // Check if the code content matches
-          if (codeEl.textContent.trim() === block.code) {
-            targetElement = codeEl.parentElement; // Get the pre element
-            break;
-          }
+    // Try to find the matching code element
+    for (const codeEl of codeElements) {
+      const languageClass = codeEl.className.match(/language-(\w+)/);
+      if (languageClass && languageClass[1] === block.language) {
+        // Check if the code content matches
+        if (codeEl.textContent.trim() === block.code) {
+          targetElement = codeEl.parentElement; // Get the pre element
+          break;
         }
       }
+    }
 
-      if (!targetElement) {
-        console.warn(`Could not find target element for ${block.language} diagram`);
-        continue;
+    if (!targetElement) {
+      console.warn(`Could not find target element for ${block.language} diagram`);
+      continue;
+    }
+
+    // Generate unique ID for this diagram
+    const diagramId = `diagram-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create loading placeholder if enabled
+    let loadingPlaceholder = null;
+    if (showLoading) {
+      loadingPlaceholder = createLoadingPlaceholder(block.language, diagramId);
+      targetElement.replaceWith(loadingPlaceholder);
+    }
+
+    try {
+      // Update loading state
+      if (loadingPlaceholder) {
+        updateLoadingProgress(loadingPlaceholder, `Rendering ${block.language} diagram...`);
       }
 
-      // Render the diagram
-      const svgElement = await diagramManager.renderDiagram(
-        block.language,
-        block.code
+      // Render the diagram with timeout
+      const svgElement = await withTimeout(
+        diagramManager.renderDiagram(block.language, block.code),
+        timeoutMs,
+        `${block.language} diagram rendering`
       );
 
       // Create container div
       const container = document.createElement('div');
       container.className = 'diagram-container';
-      container.id = `diagram-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      container.id = diagramId;
       container.appendChild(svgElement);
 
-      // Replace the pre element with the diagram container
-      targetElement.replaceWith(container);
+      // Replace the loading placeholder or pre element with the diagram container
+      if (loadingPlaceholder) {
+        loadingPlaceholder.replaceWith(container);
+      } else {
+        targetElement.replaceWith(container);
+      }
     } catch (error) {
-      console.error(`Failed to render ${block.language} diagram:`, error);
+      // Handle error using new error handling utilities
+      const isDiagramError = error instanceof DiagramRenderError;
+      const diagramError = isDiagramError ? error : new DiagramRenderError(
+        error.message,
+        'unknown_error',
+        error
+      );
 
-      // Create error container (if we found the target element)
-      if (targetElement) {
-        const errorContainer = document.createElement('div');
-        errorContainer.className = 'diagram-container diagram-error';
-        errorContainer.id = `diagram-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Log error for debugging
+      logDiagramError(diagramError, block.language, block.code);
 
-        const errorTitle = document.createElement('p');
-        errorTitle.className = 'diagram-error-title';
-        errorTitle.textContent = `Error rendering ${block.language} diagram:`;
+      // Create error element
+      const errorElement = createErrorElement(diagramError, block.language, block.code);
+      errorElement.id = diagramId;
 
-        const errorMessage = document.createElement('pre');
-        errorMessage.className = 'diagram-error-message';
-        errorMessage.textContent = error.message;
-
-        errorContainer.appendChild(errorTitle);
-        errorContainer.appendChild(errorMessage);
-
-        targetElement.replaceWith(errorContainer);
+      // Replace the loading placeholder or pre element with error element
+      if (loadingPlaceholder) {
+        loadingPlaceholder.replaceWith(errorElement);
+      } else {
+        targetElement.replaceWith(errorElement);
       }
     }
   }
 
   return fragment;
+}
+
+/**
+ * Timeout wrapper for async operations
+ * @param {Promise} promise - The promise to wrap with timeout
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @param {string} operation - Description of the operation for error message
+ * @returns {Promise} - Promise that rejects if timeout is exceeded
+ */
+function withTimeout(promise, timeoutMs, operation = 'Operation') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    })
+  ]);
 }
 
 /**

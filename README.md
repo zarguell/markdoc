@@ -9,6 +9,13 @@ Try it out at: [https://browsermark.useast01.workers.dev/](https://browsermark.u
 ## Features
 
 - **Live Preview**: See your markdown rendered in real-time as you type
+- **Diagram Support**: Render technical diagrams using multiple diagramming languages:
+  - **Mermaid** - Flowcharts, sequence diagrams, Gantt charts, and more
+  - **Graphviz (DOT)** - Graphs and networks
+  - **Nomnoml** - UML diagrams
+  - **Pikchr** - PIC-like technical diagrams
+  - **Error Handling**: Friendly error messages with detailed debugging information
+  - **Loading Indicators**: Visual feedback while diagrams render
 - **Multiple Export Formats**:
   - PDF (with customizable headers, footers, and page numbers)
   - DOCX (Microsoft Word compatible)
@@ -44,6 +51,46 @@ This is a paragraph with **bold** and *italic* text.
 
 > Blockquotes work too
 ```
+
+### Diagram Examples
+
+**Mermaid Flowchart:**
+````markdown
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Do Something]
+    B -->|No| D[Do Something Else]
+    C --> E[End]
+    D --> E
+```
+````
+
+**Graphviz (DOT) Graph:**
+````markdown
+```dot
+digraph G {
+    A -> B;
+    B -> C;
+    C -> A;
+}
+```
+````
+
+**Nomnoml UML Diagram:**
+````markdown
+```nomnoml
+[Customer]->[Order]
+[Order]->[Product]
+```
+````
+
+**Pikchr Technical Diagram:**
+````markdown
+```pikchr
+box "Server"; arrow; box "Client"
+```
+````
 
 ## Deployment
 
@@ -87,6 +134,10 @@ npx wrangler dev
   - [Marked](https://github.com/markedjs/marked) for markdown parsing
   - [html2pdf.js](https://github.com/eKoopmans/html2pdf.js) for PDF generation
   - [DocShift](https://github.com/oryan/html2docx) for DOCX generation
+  - [Mermaid.js](https://mermaid.js.org/) for flowcharts and sequence diagrams
+  - [Viz.js](https://github.com/mdaines/viz.js) for Graphviz DOT rendering
+  - [Nomnoml](https://github.com/skanaar/nomnoml) for UML diagrams
+  - [Pikchr](https://pikchr.org/) for PIC-like technical diagrams
 - **Deployment**: Cloudflare Workers for global CDN hosting
 
 ## File Structure
