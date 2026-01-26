@@ -13,7 +13,7 @@ import { renderMarkdownWithDiagramsToHtml } from './utils/markdownDiagramProcess
 
 // Import code highlighting and wrapping modules
 import { highlightCode } from './utils/codeHighlighter.js';
-import { initialize as initializeWrap, setGlobalWrap, toggleBlockWrap } from './utils/wrapController.js';
+import { initialize as initializeWrap, setGlobalWrap } from './utils/wrapController.js';
 
 // Make marked available globally for legacy module compatibility
 window.marked = marked;
@@ -213,11 +213,6 @@ graph TD
                                 const code = codeEl.textContent;
                                 const highlighted = await highlightCode(code, language);
                                 codeEl.innerHTML = highlighted;
-
-                                // Add wrap toggle button
-                                const preElement = codeEl.parentElement;
-                                const wrapButton = createWrapButton(preElement);
-                                preElement.appendChild(wrapButton);
                             } catch (error) {
                                 console.error('Syntax highlighting error:', error);
                                 // Fallback: keep original code
@@ -244,11 +239,6 @@ graph TD
                         const code = codeEl.textContent;
                         const highlighted = await highlightCode(code, language);
                         codeEl.innerHTML = highlighted;
-
-                        // Add wrap toggle button
-                        const preElement = codeEl.parentElement;
-                        const wrapButton = createWrapButton(preElement);
-                        preElement.appendChild(wrapButton);
                     } catch (error) {
                         console.error('Syntax highlighting error:', error);
                         // Fallback: keep original code
@@ -262,30 +252,6 @@ graph TD
             // Fallback to basic markdown
             previewContent.innerHTML = marked.parse(text);
         }
-    }
-
-    // Create a wrap toggle button for a code block
-    function createWrapButton(preElement) {
-        const button = document.createElement('button');
-        button.className = 'code-wrap-toggle';
-        button.textContent = '⟳ wrap';
-        button.setAttribute('title', 'Enable wrapping for this code block');
-        button.type = 'button';
-
-        // Check if this block is already wrapped
-        const isWrapped = preElement.classList.contains('wrapped');
-        if (isWrapped) {
-            button.textContent = '⟲ unwrap';
-            button.setAttribute('title', 'Disable wrapping for this code block');
-        }
-
-        // Add click handler
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleBlockWrap(preElement);
-        });
-
-        return button;
     }
 
     // Options panel toggle
