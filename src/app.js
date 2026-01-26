@@ -11,6 +11,10 @@ import './snippet-library.js';
 import { DiagramManager } from './DiagramManager.js';
 import { renderMarkdownWithDiagramsToHtml } from './utils/markdownDiagramProcessor.js';
 
+// Import code highlighting and wrapping modules
+import { highlightCode } from './utils/codeHighlighter.js';
+import { initialize as initializeWrap, setGlobalWrap } from './utils/wrapController.js';
+
 // Make marked available globally for legacy module compatibility
 window.marked = marked;
 
@@ -91,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fontSelect = document.getElementById('font-select');
     const filenameInput = document.getElementById('filename-input');
     const autoFilenameCheckbox = document.getElementById('auto-filename-checkbox');
+    const codeWrapCheckbox = document.getElementById('code-wrap-checkbox');
     const helpBtn = document.getElementById('help-btn');
     const helpModal = document.getElementById('help-modal');
     const helpClose = document.getElementById('help-close');
@@ -142,7 +147,7 @@ graph TD
 `;
     input.value = defaultText;
 
-    // Update preview function (now async for diagram rendering)
+    // Update preview function (now async for diagram rendering and syntax highlighting)
     async function updatePreview() {
         const text = input.value;
 
@@ -202,14 +207,45 @@ graph TD
                                     <pre class="diagram-error-message">${error.message}</pre>`;
                                 preElement.replaceWith(errorDiv);
                             }
+                        } else {
+                            // Not a diagram - apply syntax highlighting
+                            try {
+                                const code = codeEl.textContent;
+                                const highlighted = await highlightCode(code, language);
+                                codeEl.innerHTML = highlighted;
+                            } catch (error) {
+                                console.error('Syntax highlighting error:', error);
+                                // Fallback: keep original code
+                            }
                         }
                     }
                 }
 
                 previewContent.innerHTML = tempDiv.innerHTML;
             } else {
-                // No diagrams - simple markdown parse
-                previewContent.innerHTML = marked.parse(text);
+                // No diagrams - simple markdown parse with highlighting
+                const html = marked.parse(text);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                // Apply syntax highlighting to all code blocks
+                const codeElements = tempDiv.querySelectorAll('pre code');
+                for (const codeEl of codeElements) {
+                    const classList = Array.from(codeEl.classList);
+                    const languageClass = classList.find(cls => cls.startsWith('language-'));
+                    const language = languageClass ? languageClass.replace('language-', '') : null;
+
+                    try {
+                        const code = codeEl.textContent;
+                        const highlighted = await highlightCode(code, language);
+                        codeEl.innerHTML = highlighted;
+                    } catch (error) {
+                        console.error('Syntax highlighting error:', error);
+                        // Fallback: keep original code
+                    }
+                }
+
+                previewContent.innerHTML = tempDiv.innerHTML;
             }
         } catch (error) {
             console.error('Preview rendering error:', error);
@@ -363,6 +399,17 @@ graph TD
     wordHeadersCheckbox.addEventListener('change', updateStylingOptions);
     fontSelect.addEventListener('change', updateStylingOptions);
 
+    // Code wrap toggle
+    if (codeWrapCheckbox) {
+        codeWrapCheckbox.addEventListener('change', (e) => {
+            setGlobalWrap(e.target.checked);
+            // Re-render preview to apply changes
+            updatePreview().catch(err => {
+                console.error('Preview update error:', err);
+            });
+        });
+    }
+
     // Help modal event listeners
     if (helpBtn && helpModal && helpClose) {
         helpBtn.addEventListener('click', () => {
@@ -396,4 +443,10 @@ graph TD
     updatePreview();
     updatePrintOptions();
     updateStylingOptions();
+
+    // Initialize wrap controller
+    const initialWrapState = initializeWrap();
+    if (codeWrapCheckbox) {
+        codeWrapCheckbox.checked = initialWrapState;
+    }
 });
