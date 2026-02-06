@@ -25,19 +25,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build regular distribution
-        run: npm run build
-
-      - name: Package regular distribution
-        run: |
-          mkdir -p dist-regular
-          cp -r dist/* dist-regular/
-
-      - name: Zip regular distribution
-        run: |
-          cd dist-regular
-          zip -r ../browsermark-web-app.zip .
-
       - name: Build single-file distribution
         run: BUILD_SINGLE_FILE=true npm run build
 
@@ -59,7 +46,6 @@ jobs:
           name: web-assets
           path: |
             dist/browsermark-single-file.html
-            browsermark-web-app.zip
 
   create-release:
     needs: prepare-assets
@@ -90,7 +76,6 @@ jobs:
           generate_release_notes: false
           files: |
             dist/browsermark-single-file.html
-            browsermark-web-app.zip
 
   build-tauri:
     needs: create-release
