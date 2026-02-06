@@ -6,12 +6,10 @@ on:
       - 'v*'
 
 jobs:
-  create-release:
+  prepare-assets:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
+      contents: read
 
     steps:
       - name: Checkout code
@@ -35,6 +33,11 @@ jobs:
           mkdir -p dist-regular
           cp -r dist/* dist-regular/
 
+      - name: Zip regular distribution
+        run: |
+          cd dist-regular
+          zip -r ../browsermark-web-app.zip .
+
       - name: Build single-file distribution
         run: BUILD_SINGLE_FILE=true npm run build
 
@@ -50,7 +53,30 @@ jobs:
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create Release and Upload Assets
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-assets
+          path: |
+            dist/browsermark-single-file.html
+            browsermark-web-app.zip
+
+  create-release:
+    needs: prepare-assets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-assets
+
+      - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         env:
@@ -63,14 +89,14 @@ jobs:
           prerelease: false
           generate_release_notes: false
           files: |
-            ./dist/browsermark-single-file.html
-            ./dist-regular/assets/**
-            ./dist-regular/index.html
+            dist/browsermark-single-file.html
+            browsermark-web-app.zip
 
   build-tauri:
     needs: create-release
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         platform: [macos-latest, ubuntu-22.04, windows-latest]
         include:
@@ -113,7 +139,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
+          releaseId: ${{ steps.create_release.outputs.id }}
           args: ${{ matrix.args }}
 
   generate-checksums:
@@ -123,9 +149,6 @@ jobs:
       contents: write
 
     steps:
-      - name: Download all artifacts
-        uses: actions/checkout@v4
-
       - name: Download release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
