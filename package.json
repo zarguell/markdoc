@@ -30,7 +30,7 @@
     "docx": "^9.5.1",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.14.0",
-    "marked": "^17.0.1",
+    "marked": "^18.0.0",
     "mermaid": "^11.12.2",
     "nomnoml": "^1.7.0",
     "pikchr-js": "^0.1.1",
