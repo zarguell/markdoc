@@ -13,17 +13,17 @@ export default defineConfig({
     emptyOutDir: true,
     cssCodeSplit: false,
     assetsInlineLimit: isSingleFile ? 100000000 : 4096,
+    codeSplitting: isSingleFile ? false : undefined,
     rollupOptions: {
       output: {
-        inlineDynamicImports: isSingleFile,
-        manualChunks: isSingleFile ? undefined : {
-          'marked': ['marked'],
-          'pdf-export': ['html2pdf.js', 'html2canvas'],
-          'docx-export': ['docshift'],
-          'mermaid-core': ['mermaid'],
-          'viz-renderer': ['@viz-js/viz'],
-          'nomnoml': ['nomnoml'],
-          'pikchr': ['pikchr-js'],
+        manualChunks: isSingleFile ? undefined : (id) => {
+          if (id.includes('node_modules/marked')) return 'marked';
+          if (id.includes('node_modules/html2pdf.js') || id.includes('node_modules/html2canvas')) return 'pdf-export';
+          if (id.includes('node_modules/docshift')) return 'docx-export';
+          if (id.includes('node_modules/mermaid')) return 'mermaid-core';
+          if (id.includes('node_modules/@viz-js/viz')) return 'viz-renderer';
+          if (id.includes('node_modules/nomnoml')) return 'nomnoml';
+          if (id.includes('node_modules/pikchr-js')) return 'pikchr';
         }
       }
     }
